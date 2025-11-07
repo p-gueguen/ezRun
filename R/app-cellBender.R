@@ -39,9 +39,22 @@ ezMethodCellBender <- function(input = NA, output = NA, param = NA) {
       cmDir <- input$getFullPaths("UnfilteredCountMatrix")
     } else {
       # Multi-modal case - construct path from ResultDir
+      # For CellRanger Multi, ResultDir points to per_sample_outs/sample-cellRanger
+      # but raw counts are at sample/multi/count/raw_feature_bc_matrix
+      # So we need to go up two levels from ResultDir and then to multi/count/raw_feature_bc_matrix
       resultPath <- input$getColumn("ResultDir")
-      cmDir <- file.path(param$dataRoot, resultPath, 
-                         "multi/count/raw_feature_bc_matrix")
+
+      # Check if this is a CellRanger Multi output (contains per_sample_outs)
+      if (grepl("/per_sample_outs/", resultPath)) {
+        # Extract the sample directory (remove per_sample_outs/sample-cellRanger)
+        sampleDir <- dirname(dirname(resultPath))
+        cmDir <- file.path(param$dataRoot, sampleDir,
+                           "multi/count/raw_feature_bc_matrix")
+      } else {
+        # Legacy path construction for other cases
+        cmDir <- file.path(param$dataRoot, resultPath,
+                           "multi/count/raw_feature_bc_matrix")
+      }
     }
   }, error = function(e) {
     stop(sprintf("Failed to construct path: %s", e$message))
